@@ -1,5 +1,4 @@
 import React from 'react';
-import DadJokes from './JokeList'
 import './App.css';
 import JokeList from './JokeList';
 
