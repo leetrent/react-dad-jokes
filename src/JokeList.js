@@ -15,6 +15,11 @@ export default class JokeList extends Component {
             jokes: JSON.parse(window.localStorage.getItem("jokes") || "[]"),
             loading: false
           };
+        this.seenJokes = new Set(this.state.jokes.map(j => j.text));
+        console.log("[JokeList][constructor] => BEGIN seenJokes:")
+        console.log(this.seenJokes);
+        console.log("[JokeList][constructor] => END seenJokes:")
+
         this.handleClick = this.handleClick.bind(this);
     }
     componentDidMount() {
@@ -24,28 +29,41 @@ export default class JokeList extends Component {
         }
     }
     async getJokes() {
-        console.log("[JokeList][getJokes][BEGIN] => this.state.jokes.length: ", this.state.jokes.length);
-        let newJokes = [];
-        while ( newJokes.length < this.props.numJokesToGet ) {
-            let response = await axios.get("https://icanhazdadjoke.com", {
-                headers: {Accept: "application/json"}
-            });
-            newJokes.push({
-                id: uuid(),
-                text: response.data.joke,
-                votes: 0 
-            });
+        try {  
+            console.log("[JokeList][getJokes][BEGIN] => this.state.jokes.length: ", this.state.jokes.length);
+            let newJokes = [];
+            while ( newJokes.length < this.props.numJokesToGet ) {
+                let response = await axios.get("https://icanhazdadjoke.com", {
+                    headers: {Accept: "application/json"}
+                });
+                let newJoke = response.data.joke;
+                if ( !this.seenJokes.has(newJoke) ) {
+                    newJokes.push({
+                        id: uuid(),
+                        text: response.data.joke,
+                        votes: 0 
+                    });
+                } else {
+                    console.log("[JokeList][getJokes] => BEGIN - FOUND DUPLICATE:");
+                    console.log(newJoke);
+                    console.log("[JokeList][getJokes] => END: - FOUND DUPLICATE");
+                }
+            }
+            console.log("[JokeList][getJokes] => # of retrieved jokes: ", newJokes.length);
+            // this.setState( {jokes: newJokes} );
+            // this.setState(st => ({jokes: [...st.jokes, ...newJokes]}));
+            this.setState(st => ({
+                loading: false,
+                jokes: [...st.jokes, ...newJokes]
+                }),
+                () => window.localStorage.setItem("jokes", JSON.stringify(this.state.jokes))
+            );
+            console.log("[JokeList][getJokes][END] => this.state.jokes.length: ", this.state.jokes.length);
         }
-        console.log("[JokeList][getJokes] => # of retrieved jokes: ", newJokes.length);
-        // this.setState( {jokes: newJokes} );
-        // this.setState(st => ({jokes: [...st.jokes, ...newJokes]}));
-        this.setState(st => ({
-            loading: false,
-            jokes: [...st.jokes, ...newJokes]
-            }),
-            () => window.localStorage.setItem("jokes", JSON.stringify(this.state.jokes))
-        );
-        console.log("[JokeList][getJokes][END] => this.state.jokes.length: ", this.state.jokes.length);
+        catch(exc) {
+            alert(exc);
+            this.setState( { loading: false } );
+        }
     }
     handleVote(id, delta) {
         this.setState(st => ({
